@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <div id="error" style="margin: auto;">
+        {% if err == 500 %}
+        <p>Server error.</p>
+        {% elif err == 405 %}
+        <p>Request method isn't allowed here.</p>
+        {% else %}
+        <p>Requested resource not found..</p>
+        {% endif %}
+    </div>
+{% endblock %}
