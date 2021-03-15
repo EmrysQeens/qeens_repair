@@ -75,7 +75,6 @@ def index():
     auth: tuple = authenticate(response, False)
     if auth[1]:
         return auth[0]
-    # print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
     return render_template('layout.html', body=templates['login'], login=True, title='Login')
 
 
