@@ -301,7 +301,7 @@ def logout():
     response.set_cookie('#user_token:id$', '', max_age=0)
     resp = authenticate(response)
     if resp[1]:
-        db.session.delete(Cookie.query.get(request.cookie.get()))
+        db.session.delete(Cookie.query.get(request.cookies.get('#user_token:id$')))
         db.session.commit()
         return resp[0]
     return resp[0]
