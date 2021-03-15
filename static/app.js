@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', (e)=>{
             $r_.success((data, stat, status)=>{
                 html = data['html']
                 templates['register']['html'] = html
+                eval(templates['register']['js'])
                 $active_menu_btn.click()
                 $manufacturer.val('')
              })
