@@ -80,13 +80,16 @@ templates = {
                 $req.success( (data, stat, status)=>{
                     $stat = data['stat']
                     if (stat==='success'){
-                        if ($stat === 'ok') {
+                        if ( $stat === 'ok') {
+                            console.log($stat)
                             $container.html(templates['register']['html'])
                             eval(templates['register']['js'])
+                            $('input[name=event]').val('register')
                             alert('Success')
                             }
                         else if( $stat === 'mobile_err') alert(`Mobile number maps to a ${data['name']} already`)
                         else if( $stat === 'amount_err') alert('Why is paid greater than cost') 
+                        else if( $stat === 'no_customer') alert (`Customer with this mobile number doesn't exist. Register don't edit`)
                     }
                 })
     

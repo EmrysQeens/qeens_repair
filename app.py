@@ -37,10 +37,9 @@ def login(username: str, password: str) -> bool:
     response = make_response(redirect(url_for('home'), 302))
     cookie_value = generate_cookie(cookie_len)
     response.set_cookie('#user_token:id$', cookie_value)
-    ip_addr: str = request.remote_addr
-    cookie = Cookie.query.filter_by(ip_address=ip_addr).first()
+    cookie = Cookie.query.get(cookie_value)
     if cookie is None:
-        cookie = Cookie(ip_address=ip_addr, cookie=cookie_value, user=user.id)
+        cookie = Cookie(cookie=cookie_value, user=user.id)
         db.session.add(cookie)
         db.session.commit()
     cookie.cookie = cookie_value
@@ -50,24 +49,21 @@ def login(username: str, password: str) -> bool:
 
 
 def validate(request_):
-    ip_addr = request_.remote_addr
-    cookie = Cookie.query.filter_by(ip_address=ip_addr).first()
-    print(ip_addr)
-    print(request_.cookies.get('#user_token:id$'))
-    print(cookie.cookie)
-    if request_.cookies.get('#user_token:id$') == cookie.cookie:
+    cookie_val = request_.cookies.get('#user_token:id$')
+    cookie = Cookie.query.get(cookie_val)
+    if cookie is not None:
         return True
     return False
 
 
 def authenticate(response, login_=True):
-    ip_addr = request.remote_addr
-    cookie = Cookie.query.filter_by(ip_address=ip_addr).first()
+    cookie_val = request.cookies.get('#user_token:id$')
+    cookie = Cookie.query.get(cookie_val)
     if cookie is None:
         if not login_:
             return response, False
         return redirect(url_for('index'), 302), False
-    if request.cookies.get('#user_token:id$') == cookie.cookie:
+    if cookie.cookie:
         return response, True
     return redirect(url_for('index'), 302), False
 
@@ -95,7 +91,9 @@ def home():
 @app.route(urls['event'], methods=["POST"])
 def app_event():
     if request.method == 'POST' and validate(request):
-        user = User.query.get(Cookie.query.filter_by(ip_address=request.remote_addr).first().user)
+        cookie_val = request.cookies.get('#user_token:id$')
+        cookie = Cookie.query.get(cookie_val)
+        user = User.query.get(cookie.user)
         event: str = request.form.get('event')
 
         def get(x):
@@ -104,10 +102,6 @@ def app_event():
         if event == 'logout':
             return logout()
         elif event == "template":
-            cookie = Cookie.query.filter_by(ip_address=request.remote_addr).first()
-            if cookie is None:
-                return jsonify({})
-            user = User.query.get(cookie.user)
             contexts = {
                 'register': {'manufacturers': Manufacturer.query.all(), 'register': True},
                 "search": {},
@@ -126,7 +120,7 @@ def app_event():
             repair = Repair.query.get(id)
             if repair is None:
                 return jsonify({'stat': 'err'})
-            customer = Customer.query.get(repair.customer)  # todo
+            customer = Customer.query.get(repair.customer)
             if get('imei') != "":
                 imei = Imei.query.filter_by(imei=get('imei')).first()
                 if imei is None:
@@ -145,8 +139,9 @@ def app_event():
                 repair.imei = ""
             customer_check = Customer.query.filter_by(mobile_number=get('mobile_number')).first()
             if customer_check is None:
-                return jsonify({'err': 'No customer'})
-            customer.first_name, customer.last_name = get('first_name'), get('last_name')
+                return jsonify({'stat': 'no_customer'})
+            customer.first_name, customer.last_name = get('first_name').capitalize(), get('last_name').capitalize()
+            customer.image = get('image')
             repair.manufacturer = Manufacturer.query.filter_by(name=get('manufacturer')).first().id
             repair.model, repair.device_pass, repair.fault, repair.battery_serial_no, = get('model').upper(), get(
                 'device_pass'), get('fault'), get('battery_serial_no')
@@ -154,12 +149,9 @@ def app_event():
             db.session.commit()
             return jsonify({'stat': 'ok'})
         elif event == 'register':
-            user = Cookie.query.filter_by(ip_address=request.remote_addr).first().user
-
             cost, paid = int(get('cost')) if get('cost') != "" else 0, int(get('paid')) if get('paid') != "" else 0
             if paid > cost:
                 return jsonify({'stat': 'amount_err'})
-
             first_name, last_name, image, mobile_number = get('first_name').capitalize(), \
                                                           get('last_name').capitalize(), \
                                                           get('image'), get('mobile_number')  # todo phone number.
@@ -190,7 +182,7 @@ def app_event():
                 model=get('model').upper(), device_pass=get('device_pass'), fault=get('fault'),
                 battery_serial_no=get('battery_serial_no'), date_b=get('date_b'),
                 accessories_collected=get('accessories_collected'), date_c="",
-                registerer=user
+                registerer=user.id
             )
             repair.cost, repair.paid, repair.balance = (get('cost'), get('paid'),
                                                         int(get('cost')) - int(get('paid'))) if get('cost') and get(
@@ -238,7 +230,7 @@ def app_event():
             view = Template(templates['view']['html']).render(context)
             return jsonify({'stat': 'repair', 'html': view, 'js': templates['view']['js']})
         elif event == 'deliver':
-            user = Cookie.query.filter_by(ip_address=request.remote_addr).first().user
+            user = cookie.user
             repair = Repair.query.get(request.form.get('id'))
             if repair is None:
                 return jsonify({'stat': 'err'})
@@ -309,7 +301,7 @@ def logout():
     response.set_cookie('#user_token:id$', '', max_age=0)
     resp = authenticate(response)
     if resp[1]:
-        Cookie.query.filter_by(ip_address=request.remote_addr).delete()
+        db.session.delete(Cookie.query.get(request.cookie.get()))
         db.session.commit()
         return resp[0]
     return resp[0]

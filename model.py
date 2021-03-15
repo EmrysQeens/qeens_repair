@@ -62,8 +62,6 @@ class User(db.Model):
 
 class Cookie(db.Model):
     __tablename__ = 'cookies'
-    id = db.Column(db.Integer,primary_key=True)
-    ip_address = db.Column(db.String(20), nullable=False, unique=True)
-    cookie = db.Column(db.String(cookie_len), nullable=False, unique=True)
+    cookie = db.Column(db.String(cookie_len), nullable=False, unique=True, primary_key=True)
     user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
