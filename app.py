@@ -52,6 +52,9 @@ def login(username: str, password: str) -> bool:
 def validate(request_):
     ip_addr = request_.remote_addr
     cookie = Cookie.query.filter_by(ip_address=ip_addr).first()
+    print(ip_addr)
+    print(request_.cookies.get('#user_token:id$'))
+    print(cookie.cookie)
     if request_.cookies.get('#user_token:id$') == cookie.cookie:
         return True
     return False
