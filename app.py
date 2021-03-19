@@ -25,7 +25,7 @@ def generate_cookie(length: int) -> str:
 
 
 def create_user(email: str, username: str, password: str, is_super_user: bool = False, image: str = ""):
-    user = User(username=username, email=email, password=password, is_super_user=is_super_user, image=image)
+    user = User(username=username.lower(), email=email.lower(), password=password, is_super_user=is_super_user, image=image)
     db.session.add(user)
     db.session.commit()
 
@@ -80,7 +80,7 @@ def index():
 @app.route(urls['home'], methods=["POST", "GET"])
 def home():
     if request.method == 'POST':
-        username = request.form.get('user-id')
+        username = request.form.get('user-id').lower()
         password = request.form.get('password')
         response = login(username, password)
         return response
@@ -114,6 +114,8 @@ def app_event():
             return authenticate(response)[0]
         elif event == 'edit_save':
             cost, paid = int(get('cost')) if get('cost') != "" else 0, int(get('paid')) if get('paid') != "" else 0
+            print(get('cost'))
+            print(get('paid'))
             if paid > cost:
                 return jsonify({'stat': 'amount_err'})
             id = request.form.get('id')
@@ -144,8 +146,9 @@ def app_event():
             customer.image = get('image')
             repair.manufacturer = Manufacturer.query.filter_by(name=get('manufacturer')).first().id
             repair.model, repair.device_pass, repair.fault, repair.battery_serial_no, = get('model').upper(), get(
-                'device_pass'), get('fault'), get('battery_serial_no')
+                'device_pass'), get('fault'), get('battery_serial_no'),
             repair.accessories_collected = get('accessories_collected')
+            repair.cost, repair.paid, repair.balance = cost, paid, cost-paid, cost-paid
             db.session.commit()
             return jsonify({'stat': 'ok'})
         elif event == 'register':
@@ -218,7 +221,7 @@ def app_event():
                 return jsonify({'stat': 'err'})
             repair = repairs[pos]
             if repair is None:
-                return jsonify({'stat': 'no_repair'})  # todo
+                return jsonify({'stat': 'no_repair_cus' if search_by[1] else 'no_repair_imei'})  # todo
             manufacturer = Manufacturer.query.get(repair.manufacturer)
             customer, imei = (model, Imei.query.get(repair.customer),) if bool_type else (
                 Customer.query.get(repair.customer), model)
@@ -294,6 +297,7 @@ def app_event():
             context = {'user': user, 'new': True if id_ == 'user_new' else False}
             html = Template(templates['user']['html']).render(context)
             return jsonify({'html': html, 'js': templates['user']['js']})
+        return jsonify({})
 
 
 def logout():

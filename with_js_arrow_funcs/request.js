@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function(e){
+document.addEventListener('DOMContentLoaded', (e)=>{
 //
 //    $.fn.switch_ = (bool) => {
 //        if (bool){
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function(e){
 //        $loader.css('display', 'block')
 //    }
 
-    $.fn.switch_ = function(bool) {
+    $.fn.switch_ = (bool) => {
         if (bool){
             $loader.css('display', 'none')
             //$container.css('display', 'block')
@@ -27,21 +27,21 @@ document.addEventListener('DOMContentLoaded', function(e){
                 url: url_,
                 method: method_type,
                 data: data,
-                beforeSend: function(){$.fn.switch_(false)},
+                beforeSend: ()=> $.fn.switch_(false),
                 timeout: 120000
          })
     }
 
     // extending request features.
     $.extend(Requests.prototype, {
-        success: function(ext){
-            $r.done(function(data, stat){
+        success: (ext)=>{
+            $r.done((data, stat) => {
                 $.fn.switch_(true)
                 ext(data, stat, $r.status)
             })
         },
 
-        info: function(){
+        info: ()=> {
             return {
                 'status': $r.status,
                 'state': $r.readyState,
@@ -51,14 +51,14 @@ document.addEventListener('DOMContentLoaded', function(e){
             }
         },
 
-        failed: function(ext){
-            $r.fail(function(){
+        failed: (ext)=>{
+            $r.fail(()=>{
                 $.fn.switch_(true)
                 ext($r.statusText)
             })
         },
 
-        get: function(){ return $r}
+        get: ()=> $r
 
     })
 

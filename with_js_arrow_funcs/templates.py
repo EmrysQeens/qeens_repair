@@ -45,7 +45,7 @@ templates = {
             $device_pass = $('input[name=device_pass]')
             $image = document.querySelector('input[name=image]')    //todo
     
-            $('#form_reg').submit( function(e){
+            $('#form_reg').submit( async (e)=>{
                 e.preventDefault()
                 if ( !$nm_test.test($first_name.val()) ||  !$nm_test.test($last_name.val()) || !$digit_test.test($mobile_number.val()))
                     return
@@ -57,48 +57,43 @@ templates = {
                     return
     
                 $data = {'image':'', 'date_b': new Date().toUTCString()}
-                
+    
+                if ($image.files.length>0){
+                    $image_data = await toBase64($image.files[0])
+                    if (! $image_data[1]) return
+                    $data['image'] = $image_data[0]
+                }
+    
                 $form_datas = $('#form_reg').serialize().split("&")
-                for (i=0; i < $form_datas.length; i++){
-                    $cur = $form_datas[i].split("=")
+                for ($form_data of $form_datas){
+                    $cur = $form_data.split("=")
                     $data[$cur[0]] = $cur[1]
                 }
-                
+    
                 if ($data['manufacturer'] === undefined) {
                     alert('Manufacturer not selected.')
                     return
                 }
-    
-             $.fn.req_w_callback = function(data){
+
                 $req = new Requests($end_pt_url,'POST', $data)
     
-                $req.success( function(data, stat, status){
+                $req.success( (data, stat, status)=>{
                     $stat = data['stat']
                     if (stat==='success'){
                         if ( $stat === 'ok') {
+                            console.log($stat)
                             $container.html(templates['register']['html'])
                             eval(templates['register']['js'])
                             $('input[name=event]').val('register')
                             alert('Success')
                             }
-                        else if( $stat === 'mobile_err') alert('Mobile number maps to a ' + data['name'] + ' already.')
+                        else if( $stat === 'mobile_err') alert(`Mobile number maps to a ${data['name']} already`)
                         else if( $stat === 'amount_err') alert('Why is paid greater than cost') 
-                        else if( $stat === 'no_customer')alert ('Customer with this mobile number does not exist. Register does not edit')
+                        else if( $stat === 'no_customer') alert (`Customer with this mobile number doesn't exist. Register don't edit`)
                     }
                 })
     
-                $req.failed( function(stat_text){ alert(stat_text)})
-             }
-             
-             if ($image.files.length>0){
-                    to_b64($image.files[0], function(result, bool){
-                       $data['image'] = result
-                       $.fn.req_w_callback($data)
-                    }) 
-                    return
-                }
-                
-                $.fn.req_w_callback($data)
+                $req.failed( stat_text=> alert(stat_text))
                 return false
             })
         """,
@@ -106,7 +101,7 @@ templates = {
 
     'search': {
         'html': """
-            <div class="cent s_cent_o bg_white" id="search_cent" style="padding: 10px; border-radius: 5px;">
+            <div class="cent s_cent_o" id="search_cent">
                 <input type="text" name="query" class="inline form-control form-control-sm" placeholder="type: query " autocomplete="off" minlength="" maxlength="30" required style="width: 80%;">
                 <button id="btn_search" class="btn" style="padding-top: 12px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
@@ -130,21 +125,20 @@ templates = {
             $bool = false
 
 
-            $query.focus(function(e){
+            $query.focus(e=>{
                 if ($bool){
                     $('#result').css('display', 'none')
                     $('#result').html('')
                     $search_cent.css('animation-name','trans_down')
                     $search_cent.css('animation-play-state','running')
-                    document.querySelector('#search_cent').addEventListener('animationend', function(e){ //todo jquery on end
-                        $('#result').css('display', 'none')
+                    document.querySelector('#search_cent').onanimationend=e=>{ //todo jquery on end
                         $bool = false
                         $btn_search.attr('disabled', $bool)
-                       })
+                       }
                     }
             })
 
-            $btn_search.click(function(e){
+            $btn_search.click(e=>{
                 if (! /^(imei:[0-9]{15}|mobile:[0-9]{11})$/.test($query.val())){
                     alert('Invalid query in search box.')
                     return
@@ -153,7 +147,7 @@ templates = {
 
 
                  $req = new Requests($end_pt_url, "POST", {'event':'search', 'query': $query.val(), 'pos': 0})
-                 $req.success( function(data, stat, status) {
+                 $req.success( (data, stat, status) => {
                      if (stat === 'success'){
                         stat_ = data['stat']
                         if (stat === 'err') alert('Invalid query in search box.')
@@ -162,18 +156,18 @@ templates = {
                                 $search_cent.css('animation-name','trans_up')
                                 $search_cent.css('animation-play-state','running')
                             }
-                            document.querySelector('#search_cent').addEventListener('animationend', function(e){ //todo jquery on end
+                            document.querySelector('#search_cent').onanimationend=e=>{ //todo jquery on end
                                 $bool=true
                                 $('#result').html(data['html'])
                                 $('#result').css('display', 'block')
                                 eval(data['js'])
                                 $btn_search.attr('disabled', $bool)
-                            })
+                            }
                         }
-                        else alert ('Repair with '+ (stat_ === 'no_repair_imei' ?  'imei' : 'mobile number') + ' does not exist')
+                        else alert (`Repair with ${stat_ === 'no_repair' ?  'imei' : 'mobile number'} does not exist`)
                      }
                  })
-                 $req.failed( function(stat_text){ alert(stat_text)})
+                 $req.failed( stat_text=> alert(stat_text))
             })
         """,
     },
@@ -240,21 +234,21 @@ templates = {
             </div>
         </div>""",
         'js': """
-            $.fn.page = function(pos){
+            $.fn.page = pos =>{
                     $data = {'event': 'search', 'query': $('input[name=query]').val(), 'pos': pos }
                     $req = new Requests($end_pt_url, 'POST', $data)
-                    $req.success(function(data, stat, status){
+                    $req.success((data, stat, status)=>{
                         $stat_ = data['stat']
                         if (stat === 'success' && stat_ != 'err') {
                             $('#result').html(data['html'])
                              eval(data['js'])
                         }
                     })
-                    $req.failed(function(stat_text){alert(stat_text)})
+                    $req.failed(stat_text => alert(stat_text))
                     }
                 
                 
-                $('#delivered').click(function(e){
+                $('#delivered').click(e => {
                     checked = e.target.checked
                     e.target.checked = checked
                     $data = {
@@ -262,14 +256,15 @@ templates = {
                                     'id': $('input[name=repair_id]').val(),
                                      'date_c': new Date().toUTCString()
                                      }
+                     console.log($data['checked'])
                     $req = new Requests($end_pt_url, 'POST', $data)
-                    $req.success(function(data, stat, status){
+                    $req.success((data, stat, status)=>{
                         if (stat === 'success' && data['stat']) {
                             alert('Delivered')
                             $.fn.page($('input[name=repair_pos]').val())
                         }
                     })
-                    $req.failed(function(stat_text){
+                    $req.failed(stat_text=>{
                         e.target.checked = ! checked
                         alert(stat_text)
                     })
@@ -277,26 +272,26 @@ templates = {
                 })
                 
                 
-                $('#delete').click(function(e){
+                $('#delete').click(e=>{
                     $data = {
                                     'event': 'delete',
                                     'id': $('input[name=repair_id]').val(),
                                     }
                     $req = new Requests($end_pt_url, 'POST', $data)
-                    $req.success(function(data, stat, status){
+                    $req.success((data, stat, status)=>{
                         $stat_ = data['stat']
                         if(stat === 'success' &&  $stat_ === 'ok') alert('Repair Deleted')
                         else alert('No Repair')
                         $('input[name=query]').focus()
                     })
-                    $req.failed(function(stat_text){alert(stat_text)})
+                    $req.failed(stat_text => alert(stat_text))
                 })
                 
                 
-                $('#edit').click(function(e){
+                $('#edit').click(e=>{
                     $data = {'event': 'edit', 'id': $('input[name=repair_id]').val(), }
                     $req = new Requests($end_pt_url, 'POST', $data)
-                    $req.success(function(data, stat, status){
+                    $req.success((data, stat, status)=>{
                         $stat_ = data['stat']
                         if (stat === 'success' && $stat_) {
                             $('#layout').html(data['html']) // todo
@@ -304,19 +299,19 @@ templates = {
                         }
                         else alert('Repair does not exist.')
                     })
-                    $req.failed(function(stat_text){alert(stat_text)})
+                    $req.failed(stat_text => alert(stat_text))
                 
                 })
                 
-                $.fn.control = function(e){
-                    e.click(function(e){
+                $.fn.control = e =>{
+                    e.click(e=>{
                         $po = Number($('input[name=repair_pos]').val())
                         $pos = e.currentTarget.id === 'next' ? $po + 1 : $po - 1
                         $.fn.page($pos)
                     })
                 }
                 
-                $.each([$('#prev'), $('#next')], function(i,e){$.fn.control(e)})
+                $.each([$('#prev'), $('#next')], (i,e)=> $.fn.control(e))
 
         """},
 
@@ -350,19 +345,19 @@ templates = {
              $loader.css('display', 'none')
              $welcome_cent = $('#welcome_div').html()
              $btns = [$('#user_new'), $('#user_edit')]
-             $.each($btns, function(i,e){
-                e.click(function(e){
+             $.each($btns, (i,e)=>{
+                e.click(e=>{
                     $req = new Requests($end_pt_url, 'POST', {'event' : 'user', 'id' :  e.currentTarget.id})
-                    $req.success(function(data, stat, status){
+                    $req.success((data, stat, status)=>{
                         if(stat === 'success'){
                             $('#welcome_div').html(data['html'])
                             eval(data['js'])
                             }
                     })
-                    $req.failed(function(stat_text) {alert(stat_text)})
+                    $req.failed(stat_text => alert(stat_text))
                 })
              })
-             $.fn.print('I have not failed. I have just found 10,000 ways that would not work. Failure is not the opposite of success it is a part of success.You build on failure. You use it as a stepping stone. Close the door on the past. You do not try to forget the mistakes, but you do not dwell on it. You do not let it have any of your energy, or any of your time, or any of your space.  Qeens_Inc.', 50, $('#welcome_msg_1'), function(e){})
+             $.fn.print("I have not failed. I've just found 10,000 ways that won't work. Failure is not the opposite of success it's a part of success.You build on failure. You use it as a stepping stone. Close the door on the past. You don't try to forget the mistakes, but you don't dwell on it. You don't let it have any of your energy, or any of your time, or any of your space.  Qeens_Inc.", 50, $('#welcome_msg_1'), e=>{})
         """,
     },
 
@@ -406,21 +401,34 @@ templates = {
             </form>
         """,
         'js': """
-            $('#user_psw_v').click(function(e){ $.fn.show_psw(e, $('input[name=password_user]'), function(x){ $('#p_en').text( x.checked ? 'Password encoded' : 'Password decoded')} )})
+            $('#user_psw_v').click(e=> $.fn.show_psw(e, $('input[name=password_user]'), x=> $('#p_en').text( x.checked ? 'Password encoded' : 'Password decoded') ))
             $image_  = document.querySelector('input[name=user_image]')
             if ($('input[name=action]').val() === 'user_edit'){
-                $image_.onchange =  function(e){
-                        if ($image_.files.length>0){
-                            //toBase64($image_.files[0]).then(function(r){$('#user_img').prop('src', r[0])}).catch(function(e){console.log(e)})
-                            to_b64($image_.files[0], function(result, bool){$('#user_img').prop('src', result)});
-                        }
+                $image_.onchange = async (e)=>{
+                    if ($image_.files.length>0){
+                        $image_data = await toBase64($image_.files[0])
+                        if (! $image_data[1]) return
+                        $('#user_img').prop('src', $image_data[0])
+                    }
                 }
                 }
-                
-                            
-            $.fn.req_w_callback = function(data){
+            $('#form_user').submit( async (e)=>{
+                e.preventDefault()
+                $data = {'image' : ""}
+                $form_datas = $('#form_user').serialize().split("&")
+                for ($form_data of $form_datas){
+                    $cur = $form_data.split("=")
+                    $data[$cur[0]] = $cur[1]
+                }
+                $data['email'] = $('input[name=email]').val()
+                if ($image_.files.length>0){
+                    $image_data = await toBase64($image_.files[0])
+                    if (! $image_data[1]) return
+                    $data['image'] = $image_data[0]
+                }
+                $data['super_user'] = $('input[name=super_user]').prop('checked')
                 $req = new Requests($end_pt_url,'POST', $data)
-                $req.success( function(data, stat, status){
+                $req.success( (data, stat, status)=>{
                     $stat = data['stat']
                     $action = data['action']
                     if (stat==='success'){
@@ -434,28 +442,8 @@ templates = {
                     }
                 })
     
-                $req.failed( function(stat_text){  alert(stat_text)})
+                $req.failed( stat_text=>  alert(stat_text))
                 return false
-            }
-                
-            $('#form_user').submit( function(e){
-                e.preventDefault()
-                $data = {'image' : ""}
-                $form_datas = $('#form_user').serialize().split("&")
-                for (i=0; i < $form_datas.length; i++){
-                    $cur = $form_datas[i].split("=")
-                    $data[$cur[0]] = $cur[1]
-                }
-                $data['email'] = $('input[name=email]').val()
-                $data['super_user'] = $('input[name=super_user]').prop('checked')
-                 if ($image_.files.length>0){
-                            to_b64($image_.files[0], function(result, bool){
-                                $data['image'] = result
-                                $.fn.req_w_callback($data)
-                                });
-                                return
-                        }
-                $.fn.req_w_callback($data)
             })
         """,
     },

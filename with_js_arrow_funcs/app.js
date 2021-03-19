@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function(e){
+document.addEventListener('DOMContentLoaded', (e)=>{
     $username = undefined
     $active_btn = undefined
     // radio btns
@@ -24,9 +24,9 @@ document.addEventListener('DOMContentLoaded', function(e){
     $container = $('#layout')
     $end_pt_url = 'event'
 
-    $.fn.print = function (text, interval, elem, func){
+    $.fn.print = (text, interval, elem, func)=>{
         $counter = 0    // defines start of printed text.
-        $interval = setInterval( function(){   // start printing text
+        $interval = setInterval(()=>{   // start printing text
             elem.text(text.substring(0, ++$counter))    // set text from substring ( 0 to counter where counter increases by one every 100ms)
             if ( $counter === text.length ) {   // if whole text is printed.
                 clearInterval($interval)    // stop printing.
@@ -35,27 +35,18 @@ document.addEventListener('DOMContentLoaded', function(e){
         }, interval)
      }
 
-     const toBase64 = function(file){ return new Promise(function(resolve, reject){
+     const toBase64 = file => new Promise((resolve, reject)=>{
                 const reader = new FileReader()
                 if (file == undefined) return
                 reader.readAsDataURL(file)
-                reader.onload = function(){resolve([reader.result, true])}
-                reader.onerror = function(err){ reject([err, false])}
+                reader.onload = () => resolve([reader.result, true])
+                reader.onerror = (err) => reject([err, false])
      })
-     }
-
-     const to_b64 = function(file, resolve){
-                const reader = new FileReader()
-                if (file == undefined) return
-                reader.readAsDataURL(file)
-                reader.onload = function(){resolve(reader.result, true)}
-                reader.onerror = function(err){ alert('image decoding error.')}
-     }
 
     //  logout button click event listener.
-    $('#logout').click( function (){
+    $('#logout').click(() => {
         $req = new Requests($end_pt_url, 'POST', {'event': 'logout'})
-        $req.success( function (data, stat, staus){
+        $req.success((data, stat, staus)=>{
             if ( stat === 'success'){
                 document.write(data)
                 document.close()
@@ -64,13 +55,13 @@ document.addEventListener('DOMContentLoaded', function(e){
                 window.location.href = window.location.href
                 }
         })
-        $req.failed(function(stat_text){
+        $req.failed(stat_text=>{
             alert(stat_text)    //todo
         })
     })
 
 
-    $.fn.re = function(e){
+    $.fn.re = (e) => {
         id = e.target.id
         //if (e.target.checked)   return
         if (templates[id]['html'] != undefined){
@@ -79,26 +70,26 @@ document.addEventListener('DOMContentLoaded', function(e){
             return
         }
         $req = new Requests($end_pt_url, 'POST', {'event': 'template', 'template': id})
-        $req.success( function(data, stat, status){
+        $req.success( async (data, stat, status)=>{
             if ( stat === 'success'){
                 html = data['html']
                 js = data['js']
-                $container.html(html)
+                await $container.html(html)
                 eval(js)
                 templates[id]['js'] = js
                 templates[id]['html'] = html
               }
         })
-        $req.failed( function(stat_text){
+        $req.failed(stat_text=>{
             alert(stat_text)    //todo
         })
     }
 
-    $.each([$register, $search, $welcome], function(i,e){e.click(function(e) {$.fn.re(e)})})
+    $.each([$register, $search, $welcome], (i,e)=>e.click(e=> $.fn.re(e)))
 
     // Add manufacturer
     $manufacturer = $('input[name=manufacturer]')
-    $('#form_manu').submit( function (e){
+    $('#form_manu').submit( async (e)=>{
         e.preventDefault()
         $active_menu_btn = $('#menu * input[type=radio]:checked')
         $manufacturer_ = $manufacturer.val()
@@ -109,17 +100,17 @@ document.addEventListener('DOMContentLoaded', function(e){
         }
 
         $req = new Requests($end_pt_url,'POST', $data)
-        $.fn.template = function(){
+        $.fn.template = () =>{
             $count = 0
             $r_ = new Requests($end_pt_url, 'POST', {'event': 'template', 'template': 'register'})
-            $r_.success(function(data, stat, status){
+            $r_.success((data, stat, status)=>{
                 html = data['html']
                 templates['register']['html'] = html
                 eval(templates['register']['js'])
                 $active_menu_btn.click()
                 $manufacturer.val('')
              })
-             $r_.failed(function(stat_text){
+             $r_.failed(stat_text=> {
                 if (stat_text != 'timeout'){
                     alert('Reload page to reflect')
                     return
@@ -129,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function(e){
                 else alert('Reload page to reflect')
              })
         }
-        $req.success( function(data, stat, status){
+        $req.success( (data, stat, status)=>{
            if (stat==='success'){
              $.fn.template()
              if (data['stat']) alert('Success')
@@ -137,11 +128,11 @@ document.addEventListener('DOMContentLoaded', function(e){
            }
         })
 
-         $req.failed( function(stat_text){alert(stat_text)})
+         $req.failed( stat_text => alert(stat_text))
         })
 
 
-    $.fn.show_psw = function(e, input, func){
+    $.fn.show_psw = (e, input, func) =>{
         $e = e.target
         input.attr('type', $e.checked ? 'text' : 'password')
         func($e)
@@ -149,24 +140,24 @@ document.addEventListener('DOMContentLoaded', function(e){
 
     //show password
     $psw_inp = [$('input[name=old_psw'), $('input[name=new_psw')]
-    $.each([$('#old_psw_chk'), $('#new_psw_chk')], function(i, e){
-        e.click(function(e){$.fn.show_psw(e, $psw_inp[i], function(x){})})
+    $.each([$('#old_psw_chk'), $('#new_psw_chk')], (i, e)=>{
+        e.click(e=>$.fn.show_psw(e, $psw_inp[i], x=>{}))
     })
 
-        $('#form_psw').submit( function(e){
+        $('#form_psw').submit( e=>{
             e.preventDefault()
             $data = {'event': 'change_psw', 'psw_old': $psw_inp[0].val(), 'psw_new': $psw_inp[1].val()}
             $req = new Requests($end_pt_url, 'POST', $data)
-            $req.success(function(data, stat, status){
+            $req.success((data, stat, status)=>{
                 $stat_ = data['stat']
                 if (stat === 'success'){
-                        $.each($psw_inp, function(i,e){e.val('')})
+                        $.each($psw_inp, (i,e)=>e.val(''))
                         if($stat_ === 'psw_err') alert('Wrong old password.')
                         else alert('Password Successfully changed.')
                 }
             })
 
-            $req.failed( function(stat_text){alert(stat_text)})
+            $req.failed( stat_text => alert(stat_text))
         })
 
     $welcome.click()
